@@ -1,10 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Sparkles } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import UpgradeButton from "@/components/UpgradeButton";
+
+const FREE_PROOF_CARD_LIMIT = 5;
 
 export default function NewProjectPage() {
   const [title, setTitle] = useState("");
@@ -14,8 +17,40 @@ export default function NewProjectPage() {
   const [dateCompleted, setDateCompleted] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [atLimit, setAtLimit] = useState(false);
+  const [checkingLimit, setCheckingLimit] = useState(true);
   const router = useRouter();
   const supabase = createClient();
+
+  useEffect(() => {
+    async function checkLimit() {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data: profile } = await supabase
+        .from("users")
+        .select("subscription_status")
+        .eq("id", user.id)
+        .single();
+
+      if (profile?.subscription_status === "pro") {
+        setCheckingLimit(false);
+        return;
+      }
+
+      const { data: projects } = await supabase
+        .from("projects")
+        .select("id, verified")
+        .eq("user_id", user.id)
+        .eq("verified", true);
+
+      if (projects && projects.length >= FREE_PROOF_CARD_LIMIT) {
+        setAtLimit(true);
+      }
+      setCheckingLimit(false);
+    }
+    checkLimit();
+  }, [supabase]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -30,6 +65,27 @@ export default function NewProjectPage() {
       if (!user) {
         setError("You must be logged in.");
         return;
+      }
+
+      // Double-check limit server-side
+      const { data: profile } = await supabase
+        .from("users")
+        .select("subscription_status")
+        .eq("id", user.id)
+        .single();
+
+      if (profile?.subscription_status !== "pro") {
+        const { data: verified } = await supabase
+          .from("projects")
+          .select("id")
+          .eq("user_id", user.id)
+          .eq("verified", true);
+
+        if (verified && verified.length >= FREE_PROOF_CARD_LIMIT) {
+          setError("You've reached the free plan limit of 5 verified proof cards. Upgrade to Pro for unlimited.");
+          setAtLimit(true);
+          return;
+        }
       }
 
       const { data: project, error: insertError } = await supabase
@@ -74,6 +130,23 @@ export default function NewProjectPage() {
         Back to Dashboard
       </Link>
 
+      {checkingLimit ? (
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-8 text-center">
+          <p className="text-gray-500">Loading...</p>
+        </div>
+      ) : atLimit ? (
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-8 text-center">
+          <Sparkles className="w-10 h-10 text-amber-400 mx-auto mb-4" />
+          <h2 className="text-xl font-bold text-navy-800 mb-2">
+            Free plan limit reached
+          </h2>
+          <p className="text-gray-500 text-sm mb-6 max-w-sm mx-auto">
+            You&apos;ve used all {FREE_PROOF_CARD_LIMIT} verified proof cards on the free plan.
+            Upgrade to Pro for unlimited proof cards.
+          </p>
+          <UpgradeButton />
+        </div>
+      ) : (
       <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-8">
         <h1 className="text-2xl font-bold text-navy-800 mb-1">Add New Project</h1>
         <p className="text-gray-500 text-sm mb-6">
@@ -174,6 +247,7 @@ export default function NewProjectPage() {
           </div>
         </form>
       </div>
+      )}
     </div>
   );
 }

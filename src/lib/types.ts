@@ -5,6 +5,9 @@ export interface User {
   username: string | null;
   bio: string;
   title: string;
+  subscription_status: "free" | "pro";
+  stripe_customer_id: string | null;
+  stripe_subscription_id: string | null;
   created_at: string;
 }
 
