@@ -1,8 +1,6 @@
-"use client";
-
-import { useState } from "react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import Link from "next/link";
 import {
   Shield,
   BadgeCheck,
@@ -14,28 +12,6 @@ import {
 } from "lucide-react";
 
 export default function LandingPage() {
-  const [email, setEmail] = useState("");
-  const [submitted, setSubmitted] = useState(false);
-  const [loading, setLoading] = useState(false);
-
-  async function handleWaitlist(e: React.FormEvent) {
-    e.preventDefault();
-    setLoading(true);
-    try {
-      const res = await fetch("/api/waitlist", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email }),
-      });
-      if (res.ok) {
-        setSubmitted(true);
-        setEmail("");
-      }
-    } finally {
-      setLoading(false);
-    }
-  }
-
   return (
     <div className="min-h-screen">
       <Navbar />
@@ -60,36 +36,13 @@ export default function LandingPage() {
               record you own forever.
             </p>
 
-            {/* Waitlist form */}
-            {submitted ? (
-              <div className="inline-flex items-center gap-2 bg-emerald-500/20 border border-emerald-500/30 rounded-xl px-6 py-4 text-emerald-300 font-medium">
-                <Check className="w-5 h-5" />
-                You&apos;re on the list! We&apos;ll be in touch soon.
-              </div>
-            ) : (
-              <form onSubmit={handleWaitlist} className="flex flex-col sm:flex-row gap-3 max-w-md">
-                <input
-                  type="email"
-                  required
-                  placeholder="Enter your email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="flex-1 px-5 py-3 rounded-xl bg-white/10 border border-white/20 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
-                />
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="bg-emerald-500 hover:bg-emerald-600 text-white px-6 py-3 rounded-xl font-semibold transition flex items-center justify-center gap-2 disabled:opacity-50"
-                >
-                  {loading ? "Joining..." : "Join Waitlist"}
-                  <ArrowRight className="w-4 h-4" />
-                </button>
-              </form>
-            )}
-
-            <p className="text-gray-500 text-sm mt-4">
-              Free to start. No credit card required.
-            </p>
+            <Link
+              href="/signup"
+              className="inline-flex items-center gap-2 bg-emerald-500 hover:bg-emerald-600 text-white px-8 py-4 rounded-xl font-semibold text-lg transition"
+            >
+              Start Free — No Credit Card
+              <ArrowRight className="w-5 h-5" />
+            </Link>
           </div>
         </div>
       </section>
@@ -245,12 +198,12 @@ export default function LandingPage() {
                   </li>
                 ))}
               </ul>
-              <a
+              <Link
                 href="/signup"
                 className="block w-full text-center py-3 rounded-xl border-2 border-navy-800 text-navy-800 font-semibold hover:bg-navy-800 hover:text-white transition"
               >
                 Get Started Free
-              </a>
+              </Link>
             </div>
 
             {/* Pro tier */}
@@ -286,12 +239,12 @@ export default function LandingPage() {
                   </li>
                 ))}
               </ul>
-              <a
+              <Link
                 href="/signup"
                 className="block w-full text-center py-3 rounded-xl bg-emerald-500 text-white font-semibold hover:bg-emerald-600 transition"
               >
                 Start Pro Trial
-              </a>
+              </Link>
             </div>
           </div>
         </div>
@@ -307,33 +260,13 @@ export default function LandingPage() {
             Join thousands of freelancers building verified portfolios that
             clients trust.
           </p>
-          {submitted ? (
-            <div className="inline-flex items-center gap-2 bg-emerald-500/20 border border-emerald-500/30 rounded-xl px-6 py-4 text-emerald-300 font-medium">
-              <Check className="w-5 h-5" />
-              You&apos;re on the list!
-            </div>
-          ) : (
-            <form
-              onSubmit={handleWaitlist}
-              className="flex flex-col sm:flex-row gap-3 max-w-md mx-auto"
-            >
-              <input
-                type="email"
-                required
-                placeholder="Enter your email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="flex-1 px-5 py-3 rounded-xl bg-white/10 border border-white/20 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-              />
-              <button
-                type="submit"
-                disabled={loading}
-                className="bg-emerald-500 hover:bg-emerald-600 text-white px-6 py-3 rounded-xl font-semibold transition disabled:opacity-50"
-              >
-                Join Waitlist
-              </button>
-            </form>
-          )}
+          <Link
+            href="/signup"
+            className="inline-flex items-center gap-2 bg-emerald-500 hover:bg-emerald-600 text-white px-8 py-4 rounded-xl font-semibold text-lg transition"
+          >
+            Start Free — No Credit Card
+            <ArrowRight className="w-5 h-5" />
+          </Link>
         </div>
       </section>
 
