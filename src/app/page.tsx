@@ -214,7 +214,7 @@ export default function LandingPage() {
               </div>
               <h3 className="text-lg font-bold text-white mb-1">Pro</h3>
               <div className="text-4xl font-extrabold text-white mb-1">
-                $9
+                $5
                 <span className="text-base font-normal text-gray-400">
                   /month
                 </span>
