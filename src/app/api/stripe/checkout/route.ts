@@ -4,6 +4,23 @@ import { getStripe } from "@/lib/stripe";
 
 export async function POST() {
   try {
+    // Validate required env vars before doing anything
+    if (!process.env.STRIPE_SECRET_KEY) {
+      console.error("[stripe/checkout] STRIPE_SECRET_KEY is not set");
+      return NextResponse.json(
+        { error: "Stripe is not configured. Please set STRIPE_SECRET_KEY." },
+        { status: 503 }
+      );
+    }
+
+    if (!process.env.STRIPE_PRO_PRICE_ID) {
+      console.error("[stripe/checkout] STRIPE_PRO_PRICE_ID is not set");
+      return NextResponse.json(
+        { error: "Stripe price is not configured. Please set STRIPE_PRO_PRICE_ID." },
+        { status: 503 }
+      );
+    }
+
     const supabase = await createClient();
     const {
       data: { user },
@@ -14,11 +31,19 @@ export async function POST() {
     }
 
     // Get user profile to check for existing Stripe customer
-    const { data: profile } = await supabase
+    const { data: profile, error: profileError } = await supabase
       .from("users")
       .select("stripe_customer_id, email, name")
       .eq("id", user.id)
       .single();
+
+    if (profileError) {
+      console.error("[stripe/checkout] Failed to fetch user profile:", profileError);
+      return NextResponse.json(
+        { error: "Failed to fetch user profile" },
+        { status: 500 }
+      );
+    }
 
     const appUrl =
       process.env.NEXT_PUBLIC_APP_URL ||
@@ -51,7 +76,7 @@ export async function POST() {
       mode: "subscription",
       line_items: [
         {
-          price: process.env.STRIPE_PRO_PRICE_ID!,
+          price: process.env.STRIPE_PRO_PRICE_ID,
           quantity: 1,
         },
       ],

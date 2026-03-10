@@ -28,11 +28,15 @@ export default async function DashboardPage({
 
   if (!user) redirect("/login");
 
-  const { data: profile } = await supabase
+  const { data: profile, error: profileError } = await supabase
     .from("users")
     .select("*")
     .eq("id", user.id)
     .single();
+
+  if (profileError) {
+    console.error("[dashboard] Failed to load profile:", profileError);
+  }
 
   const { data: projects } = await supabase
     .from("projects")
@@ -45,7 +49,8 @@ export default async function DashboardPage({
   const totalProjects = projects?.length || 0;
   const isPro = profile?.subscription_status === "pro";
   const atLimit = !isPro && verifiedCount >= FREE_PROOF_CARD_LIMIT;
-  const profileUrl = `${process.env.NEXT_PUBLIC_APP_URL || ""}/${profile?.username || ""}`;
+  const username = profile?.username || "";
+  const profileUrl = `${process.env.NEXT_PUBLIC_APP_URL || ""}/${username}`;
   const justUpgraded = params.upgraded === "true";
 
   return (
@@ -88,7 +93,7 @@ export default async function DashboardPage({
         <div className="flex items-center gap-3 flex-wrap">
           <CopyLinkButton url={profileUrl} />
           <Link
-            href={`/${profile?.username}`}
+            href={`/${username}`}
             className="inline-flex items-center gap-2 text-sm font-medium text-gray-600 hover:text-navy-800 transition border border-gray-200 px-4 py-2 rounded-lg"
           >
             <ExternalLink className="w-4 h-4" />

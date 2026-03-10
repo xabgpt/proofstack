@@ -25,7 +25,7 @@ export default async function DashboardLayout({
   return (
     <div className="min-h-screen bg-gray-50">
       <Navbar
-        user={profile ? { name: profile.name, username: profile.username } : null}
+        user={profile ? { name: profile.name || "", username: profile.username || "" } : null}
       />
       {children}
     </div>

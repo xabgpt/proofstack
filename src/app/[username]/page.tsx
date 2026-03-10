@@ -62,12 +62,13 @@ export default async function PublicProfilePage({
             {/* Avatar */}
             <div className="w-20 h-20 bg-navy-800 rounded-full flex items-center justify-center flex-shrink-0">
               <span className="text-2xl font-bold text-white">
-                {user.name
-                  ?.split(" ")
+                {(user.name || "")
+                  .split(" ")
                   .map((n: string) => n[0])
+                  .filter(Boolean)
                   .join("")
                   .toUpperCase()
-                  .slice(0, 2)}
+                  .slice(0, 2) || "?"}
               </span>
             </div>
             <div>
