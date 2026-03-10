@@ -4,9 +4,11 @@ import { createClient } from "@/lib/supabase/server";
 export async function POST(request: Request) {
   try {
     const { projectId } = await request.json();
+    console.log("[verify/send] Received request for projectId:", projectId);
+
     const supabase = await createClient();
 
-    // Get the project
+    // Get the project with joined user data
     const { data: project, error: projectError } = await supabase
       .from("projects")
       .select("*, users!inner(name, email)")
@@ -14,11 +16,18 @@ export async function POST(request: Request) {
       .single();
 
     if (projectError || !project) {
+      console.error("[verify/send] Project lookup failed:", projectError?.message || "No project found");
       return NextResponse.json(
-        { error: "Project not found" },
+        { error: "Project not found", details: projectError?.message },
         { status: 404 }
       );
     }
+
+    console.log("[verify/send] Project found:", {
+      title: project.title,
+      client_email: project.client_email,
+      verification_token: project.verification_token,
+    });
 
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
     const verifyUrl = `${appUrl}/verify/${project.verification_token}`;
@@ -26,32 +35,71 @@ export async function POST(request: Request) {
       ? ((project as Record<string, unknown>).users as { name: string }).name
       : "A freelancer";
 
+    console.log("[verify/send] Freelancer name:", freelancerName);
+    console.log("[verify/send] Verify URL:", verifyUrl);
+
     // Send email via Resend
-    if (process.env.RESEND_API_KEY) {
-      await fetch("https://api.resend.com/emails", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
-        },
-        body: JSON.stringify({
-          from: "ProofStack <noreply@proofstack.io>",
-          to: project.client_email,
-          subject: `${freelancerName} wants you to verify their work`,
-          html: getEmailTemplate({
-            freelancerName,
-            projectTitle: project.title,
-            projectDescription: project.description,
-            verifyUrl,
-          }),
-        }),
-      });
+    const resendApiKey = process.env.RESEND_API_KEY;
+    if (!resendApiKey) {
+      console.error("[verify/send] RESEND_API_KEY is not set!");
+      return NextResponse.json({
+        success: false,
+        error: "Email service not configured",
+        verifyUrl,
+      }, { status: 500 });
     }
 
-    return NextResponse.json({ success: true, verifyUrl });
-  } catch {
+    console.log("[verify/send] RESEND_API_KEY present, length:", resendApiKey.length);
+    console.log("[verify/send] Sending email to:", project.client_email);
+
+    // Use onboarding@resend.dev unless you have a verified domain
+    const fromAddress = "ProofStack <onboarding@resend.dev>";
+
+    const emailPayload = {
+      from: fromAddress,
+      to: project.client_email,
+      subject: `${freelancerName} wants you to verify their work`,
+      html: getEmailTemplate({
+        freelancerName,
+        projectTitle: project.title,
+        projectDescription: project.description,
+        verifyUrl,
+      }),
+    };
+
+    console.log("[verify/send] Email payload:", {
+      from: emailPayload.from,
+      to: emailPayload.to,
+      subject: emailPayload.subject,
+    });
+
+    const resendResponse = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${resendApiKey}`,
+      },
+      body: JSON.stringify(emailPayload),
+    });
+
+    const resendData = await resendResponse.json();
+
+    if (!resendResponse.ok) {
+      console.error("[verify/send] Resend API error:", resendResponse.status, resendData);
+      return NextResponse.json({
+        success: false,
+        error: "Failed to send email",
+        resendError: resendData,
+        verifyUrl,
+      }, { status: 500 });
+    }
+
+    console.log("[verify/send] Email sent successfully:", resendData);
+    return NextResponse.json({ success: true, verifyUrl, emailId: resendData.id });
+  } catch (err) {
+    console.error("[verify/send] Unexpected error:", err);
     return NextResponse.json(
-      { error: "Internal server error" },
+      { error: "Internal server error", details: String(err) },
       { status: 500 }
     );
   }
