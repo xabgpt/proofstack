@@ -29,7 +29,10 @@ export async function POST(request: Request) {
       verification_token: project.verification_token,
     });
 
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL
+      || (process.env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}` : null)
+      || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null)
+      || "http://localhost:3000";
     const verifyUrl = `${appUrl}/verify/${project.verification_token}`;
     const freelancerName = (project as Record<string, unknown>).users
       ? ((project as Record<string, unknown>).users as { name: string }).name
