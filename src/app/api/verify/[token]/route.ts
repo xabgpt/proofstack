@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 export async function GET(
   request: Request,
@@ -7,7 +7,10 @@ export async function GET(
 ) {
   try {
     const { token } = await params;
-    const supabase = await createClient();
+
+    // Use admin client to bypass RLS — the client clicking
+    // the verification link has no Supabase session.
+    const supabase = createAdminClient();
 
     const { data: project, error } = await supabase
       .from("projects")
@@ -35,7 +38,8 @@ export async function GET(
       description: project.description,
       freelancer_name: (project.users as unknown as { name: string }).name,
     });
-  } catch {
+  } catch (err) {
+    console.error("[verify/token] GET error:", err);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
@@ -50,7 +54,9 @@ export async function POST(
   try {
     const { token } = await params;
     const { confirmed } = await request.json();
-    const supabase = await createClient();
+
+    // Use admin client to bypass RLS
+    const supabase = createAdminClient();
 
     if (confirmed) {
       const { error } = await supabase
@@ -63,12 +69,14 @@ export async function POST(
         .eq("verified", false);
 
       if (error) {
+        console.error("[verify/token] POST update error:", error);
         return NextResponse.json({ error: error.message }, { status: 500 });
       }
     }
 
     return NextResponse.json({ success: true });
-  } catch {
+  } catch (err) {
+    console.error("[verify/token] POST error:", err);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
